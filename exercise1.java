@@ -5,14 +5,14 @@ import javax.lang.model.util.ElementScanner14;
 import java.util.concurrent.TimeUnit;
 import java.lang.Runnable;
 
-
-
 // the host will fill up drinks in the bowl
 class Host implements Runnable {
     private Bowl bowl;
+
     public Host(Bowl bowl) {
         this.bowl = bowl;
     }
+
     public void run() {
         while (true) {
             bowl.fill();
@@ -26,11 +26,6 @@ class Host implements Runnable {
     }
 }
 
-
-
-
-
-
 // implement a bowl that can be filled and drunk from
 
 class Bowl {
@@ -39,6 +34,7 @@ class Bowl {
     private Lock lock;
     private Condition notFull;
     private Condition notEmpty;
+
     public Bowl(int capacity) {
         this.capacity = capacity;
         this.amount = 0;
@@ -46,6 +42,7 @@ class Bowl {
         this.notFull = lock.newCondition();
         this.notEmpty = lock.newCondition();
     }
+
     public void fill() {
         lock.lock();
         try {
@@ -60,6 +57,7 @@ class Bowl {
             lock.unlock();
         }
     }
+
     public void drink() {
         lock.lock();
         try {
@@ -99,7 +97,7 @@ class Guest implements Runnable {
     private Lock lock;
     private Condition condition;
 
-    public Guest(String name,  Bowl bowl, Lock lock, Condition condition) {
+    public Guest(String name, Bowl bowl, Lock lock, Condition condition) {
         this.name = name;
         this.bowl = bowl;
         this.lock = lock;
@@ -128,9 +126,11 @@ class Guest implements Runnable {
 
 class Monitor implements Runnable {
     private Bowl bowl;
+
     public Monitor(Bowl bowl) {
         this.bowl = bowl;
     }
+
     public void run() {
         while (true) {
             if (bowl.isEmpty()) {
@@ -164,12 +164,3 @@ public class exercise1 {
         monitorThread.start();
     }
 }
-
-
-
-
-
-
-
-
-
