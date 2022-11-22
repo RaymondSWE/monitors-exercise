@@ -125,7 +125,7 @@ class Guest implements Runnable {
         }
     }
 }
-// implement a monitor to test the whole program
+
 class Monitor implements Runnable {
     private Bowl bowl;
     public Monitor(Bowl bowl) {
