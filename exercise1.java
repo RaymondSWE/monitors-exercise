@@ -1,116 +1,175 @@
-
 import java.util.concurrent.locks.*;
+
+import javax.lang.model.util.ElementScanner14;
+
 import java.util.concurrent.TimeUnit;
 import java.lang.Runnable;
 
 
-// Implement reader and writer classes
-class Reader implements Runnable {
-    private Host host;
-    private int id;
-    public Reader(Host host, int id) {
-        this.host = host;
-        this.id = id;
+
+// the host will fill up drinks in the bowl
+class Host implements Runnable {
+    private Bowl bowl;
+    public Host(Bowl bowl) {
+        this.bowl = bowl;
     }
     public void run() {
-        try {
-            host.read(id);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        while (true) {
+            bowl.fill();
+            System.out.println("Host is filling up the bowl");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
 
-class Writer implements Runnable {
-    private Host host;
-    private int id;
-    public Writer(Host host, int id) {
-        this.host = host;
-        this.id = id;
+
+
+
+
+
+// implement a bowl that can be filled and drunk from
+
+class Bowl {
+    private int capacity;
+    private int amount;
+    private Lock lock;
+    private Condition notFull;
+    private Condition notEmpty;
+    public Bowl(int capacity) {
+        this.capacity = capacity;
+        this.amount = 0;
+        this.lock = new ReentrantLock();
+        this.notFull = lock.newCondition();
+        this.notEmpty = lock.newCondition();
     }
-    public void run() {
-        try {
-            host.write(id);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-}
-
-// Rather than having controll class have 2 lock objects one for read and one for write
-// we can use a single lock object and use the condition object to control the threads
-// that are waiting to read or write.
-
-class Host {
-    private int readers = 0;
-    private int writers = 0;
-    private int writeRequests = 0;
-    private Lock lock = new ReentrantLock();
-    private Condition okToRead = lock.newCondition();
-    private Condition okToWrite = lock.newCondition();
-
-    public void read(int id) throws InterruptedException {
+    public void fill() {
         lock.lock();
         try {
-            while (writers > 0 || writeRequests > 0) {
-                okToRead.await();
+            while (amount == capacity) {
+                notFull.await();
             }
-            readers++;
-            System.out.println("Reader " + id + " is reading");
-            Thread.sleep(1000);
-            System.out.println("Reader " + id + " is done reading");
-            readers--;
-            if (readers == 0) {
-                okToWrite.signal();
+            amount = capacity;
+            notEmpty.signal();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+    public void drink() {
+        lock.lock();
+        try {
+            while (amount == 0) {
+                notEmpty.await();
             }
+            amount = 0;
+            notFull.signal();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         } finally {
             lock.unlock();
         }
     }
 
-    public void write(int id) throws InterruptedException {
-        lock.lock();
-        try {
-            writeRequests++;
-            while (readers > 0 || writers > 0) {
-                okToWrite.await();
+    // Check #drinks left (in the bowl)
+    public int getDrinks() {
+        return amount;
+    }
+
+    // Notify the host when there is 0 drinks in bowl
+    public boolean isEmpty() {
+        return amount == 0;
+    }
+
+    // Make guest wait while filling the bowl till it is full
+    public boolean isFull() {
+        return amount == capacity;
+    }
+
+}
+
+// implement guest class that drinks from bowl if getDrinks > 0
+class Guest implements Runnable {
+    private String name;
+    private Bowl bowl;
+    private Lock lock;
+    private Condition condition;
+
+    public Guest(String name,  Bowl bowl, Lock lock, Condition condition) {
+        this.name = name;
+        this.bowl = bowl;
+        this.lock = lock;
+        this.condition = condition;
+    }
+
+    public void run() {
+        while (getDrinks > 0) {
+            lock.lock();
+            try {
+                while (bowl.getDrinks() == 0) {
+                    condition.await();
+                }
+                bowl.drink();
+                getDrinks--;
+                System.out.println(name + " drinks from bowl. " + getDrinks + " drinks left.");
+                condition.signalAll();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                lock.unlock();
             }
-            writeRequests--;
-            writers++;
-            System.out.println("Writer " + id + " is writing");
-            Thread.sleep(1000);
-            System.out.println("Writer " + id + " is done writing");
-            writers--;
-            if (writeRequests > 0) {
-                okToWrite.signal();
+        }
+    }
+}
+// implement a monitor to test the whole program
+class Monitor implements Runnable {
+    private Bowl bowl;
+    public Monitor(Bowl bowl) {
+        this.bowl = bowl;
+    }
+    public void run() {
+        while (true) {
+            if (bowl.isEmpty()) {
+                System.out.println("Bowl is empty");
+            } else if (bowl.isFull()) {
+                System.out.println("Bowl is full");
             } else {
-                okToRead.signalAll();
+                System.out.println("Bowl has " + bowl.getDrinks() + " drinks left");
             }
-        } finally {
-            lock.unlock();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
 
-
-// Check the conditions before interacting with them so that they act more like a complete monitor system as seen in the lectures.
-// Not completed yet, some issues.
+// main class
 public class exercise1 {
     public static void main(String[] args) {
-        Host host = new Host();
-        Thread[] threads = new Thread[10];
-        for (int i = 0; i < 10; i++) {
-            if (i % 2 == 0) {
-                threads[i] = new Thread(new Reader(host, i));
-            } else {
-                threads[i] = new Thread(new Writer(host, i));
-            }
-        }
-        for (int i = 0; i < 10; i++) {
-            threads[i].start();
-        }
+        Bowl bowl = new Bowl(10);
+        Guest guest = new Guest("Guest", bowl);
+        Host host = new Host(bowl);
+        Monitor monitor = new Monitor(bowl);
+        Thread guestThread = new Thread(guest);
+        Thread hostThread = new Thread(host);
+        Thread monitorThread = new Thread(monitor);
+        guestThread.start();
+        hostThread.start();
+        monitorThread.start();
     }
 }
+
+
+
+
+
+
 
 
 
