@@ -14,7 +14,7 @@ class Host implements Runnable {
     }
 
     public void run() {
-        while (true) {
+        while (true && !Thread.currentThread().isInterrupted()) {
             bowl.fill();
             System.out.println("Host is filling up the bowl");
             try {
@@ -103,8 +103,8 @@ class Guest implements Runnable {
         this.lock = lock;
         this.condition = condition;
     }
-
-    public void run() {
+    
+    public void run(int getDrinks) {
         while (getDrinks > 0) {
             lock.lock();
             try {
@@ -121,6 +121,14 @@ class Guest implements Runnable {
                 lock.unlock();
             }
         }
+    }
+
+    @Override
+    public void run() {
+        
+
+
+        
     }
 }
 
@@ -153,7 +161,7 @@ class Monitor implements Runnable {
 public class exercise1 {
     public static void main(String[] args) {
         Bowl bowl = new Bowl(10);
-        Guest guest = new Guest("Guest", bowl);
+        Guest guest = new Guest("Guest", bowl, null, null);
         Host host = new Host(bowl);
         Monitor monitor = new Monitor(bowl);
         Thread guestThread = new Thread(guest);
