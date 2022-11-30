@@ -98,21 +98,22 @@ public class messages {
             }
         });
         
-        //  The following output rule. let a = Min + (Max-Min)*3/4    if Mean>=a then output.
+        // Process will output if requirements are met
         Thread output = new Thread(new Runnable() {
             @Override
             public void run() {
                 List<String> list = new ArrayList<String>();
-                // let a = min + (max-min)*3/4
-                a = min + (max - min) * 3 / 4;
-                // if mean>=a then output
-                if (mean >= a) {
-                    System.out.println("Output: " + list);
-                    list.clear();
-                }
- 
+                // while (true) {
+                    synchronized (queue) {
+                    // let a = min + (max-min)*3/4
+                    a = min + (max - min) * 3 / 4;
+                    // if mean>=a then output
+                    if (mean >= a) {
+                        System.out.println("Output: " + list);
+                        list.clear();
+                    }
             }
-        });
+        };
 
 
 
