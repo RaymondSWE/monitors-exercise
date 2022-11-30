@@ -114,11 +114,13 @@ public class messages {
                     }
             }
         };
+        
 
-
-
-
-    
-
+    });
+        producer.start();
+        producer2.start();
+        PairingEvents.start();
+        collector.start();
+        output.start();
     }
 }
