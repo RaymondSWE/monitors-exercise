@@ -26,8 +26,6 @@ class Host implements Runnable {
     }
 }
 
-// implement a bowl that can be filled and drunk from
-
 class Bowl {
     private int capacity;
     private int amount;
@@ -90,7 +88,6 @@ class Bowl {
 
 }
 
-// implement guest class that drinks from bowl if getDrinks > 0
 class Guest implements Runnable {
     private String name;
     private Bowl bowl;
